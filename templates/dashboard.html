@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Python Instance Runner</title>
+    <style>
+        body { font-family: monospace; margin: 2em; }
+        textarea { width: 100%; height: 200px; font-family: monospace; }
+        pre { background: #f4f4f4; padding: 1em; overflow-x: auto; }
+        table { border-collapse: collapse; width: 100%; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        .status-pending { color: orange; }
+        .status-running { color: blue; }
+        .status-completed { color: green; }
+        .status-failed { color: red; }
+    </style>
+</head>
+<body>
+    <h1>Python Instance Runner</h1>
+    
+    <h2>Submit New Task</h2>
+    <p>Write Python code. If you define a <code>run()</code> function, it will be called.
+       Set a <code>result</code> variable to return a value.</p>
+    <textarea id="code" placeholder='# Example:
+result = sum(range(10))
+print("hello from task")
+'># Example: compute something
+result = sum(i*i for i in range(100))
+</textarea>
+    <br>
+    <button onclick="submitTask()">Submit Task</button>
+    <div id="submitResult"></div>
+
+    <h2>Task List (auto-refresh)</h2>
+    <table id="taskTable">
+        <thead>
+            <tr><th>ID</th><th>Status</th><th>Result</th><th>Error</th><th>Stdout</th><th>Submitted</th></tr>
+        </thead>
+        <tbody id="taskBody"></tbody>
+    </table>
+
+    <script>
+        function submitTask() {
+            const code = document.getElementById('code').value;
+            fetch('/api/submit', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ code: code })
+            })
+            .then(res => res.json())
+            .then(data => {
+                document.getElementById('submitResult').innerHTML = `Task submitted: ${data.task_id}`;
+                refreshTasks();
+            });
+        }
+
+        function refreshTasks() {
+            fetch('/api/tasks')
+                .then(res => res.json())
+                .then(tasks => {
+                    const tbody = document.getElementById('taskBody');
+                    tbody.innerHTML = '';
+                    for (const [id, task] of Object.entries(tasks).reverse()) {
+                        const row = tbody.insertRow();
+                        row.insertCell(0).innerText = id.slice(0,8);
+                        row.insertCell(1).innerHTML = `<span class="status-${task.status}">${task.status}</span>`;
+                        row.insertCell(2).innerText = task.result !== undefined ? JSON.stringify(task.result) : '';
+                        row.insertCell(3).innerText = task.error || '';
+                        row.insertCell(4).innerText = (task.stdout || '').slice(0, 100);
+                        row.insertCell(5).innerText = task.submitted_at ? new Date(task.submitted_at*1000).toLocaleTimeString() : '';
+                    }
+                });
+        }
+
+        refreshTasks();
+        setInterval(refreshTasks, 2000);
+    </script>
+</body>
+</html>

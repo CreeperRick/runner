@@ -7,3 +7,9 @@ instance_runner/
 │   └── dashboard.html # Simple web UI
 └── tasks/             # (optional) store submitted code files
 ```
+```
+pip install flask
+```
+```
+python runner.py
+```
